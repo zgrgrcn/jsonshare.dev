@@ -16,11 +16,10 @@ export default async function connectToDatabase() {
 
         // @ts-ignore
         const collection = db.collection(process.env.COLLECTION_NAME);
-        console.log(`Successfully connected to database: ${db.databaseName} and collection: ${collection.collectionName}`);
         return collection;
     } catch (error) {
         // Ensures that the client will close when you finish/error
-        console.log(error);
+        console.error('connectToDatabase error', error);
         await client.close();
     }
 }

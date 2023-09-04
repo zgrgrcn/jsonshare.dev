@@ -1,11 +1,13 @@
 import { useRouter } from 'next/navigation'
 import React, { useState } from 'react';
 
-interface SaveButtonProps {
+interface UpdateButtonProps {
     jsonData: any; // Define the type for your JSON data
 }
 
-const SaveButton: React.FC<SaveButtonProps> = ({ jsonData }) => {
+const UpdateButton: React.FC<UpdateButtonProps> = ({ jsonData }) => {
+    const id = jsonData.id;
+    delete jsonData.id;
     const router = useRouter()
     const [loading, setLoading] = useState(false);
 
@@ -17,19 +19,12 @@ const SaveButton: React.FC<SaveButtonProps> = ({ jsonData }) => {
         setLoading(true);
 
         try {
-            const response = await fetch('/api/save-data', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+            const response = await fetch(`/api/save-data/${id}`, {
+                method: 'PATCH',
                 body: JSON.stringify({ jsonData }),
             });
 
-            if (response.ok) {
-                const responseBody = await response.json();
-                console.info('redirecting to ', `/json/${responseBody._id}`);
-                router.push(`/json/${responseBody._id}`)
-            } else {
+            if (!response.ok) {
                 console.error('response', response)
                 console.error('Failed to save data to the database');
             }
@@ -55,9 +50,9 @@ const SaveButton: React.FC<SaveButtonProps> = ({ jsonData }) => {
             onClick={handleSaveClick}
             disabled={loading}
         >
-            {loading ? 'Saving...' : 'Save'}
+            {loading ? 'Updating...' : 'Update'}
         </button>
     );
 };
 
-export default SaveButton;
+export default UpdateButton;
