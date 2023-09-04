@@ -11,6 +11,9 @@ export async function GET(req: Request, context: { params: { jsonId: string } })
     }
 
     const myJson = await collection.findOne({ _id: new ObjectId(jsonId) });
+    if (!myJson) {
+        return NextResponse.json({ error: 'JSON not found' });
+    }
     return NextResponse.json({ success: true, jsonId, jsonData: myJson.body.jsonData });
 }
 
