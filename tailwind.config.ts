@@ -86,7 +86,7 @@ const config: Config = {
         'zoom-in': 'zoom-in',
         'zoom-out': 'zoom-out',
       },
-      typography: (theme) => ({
+      typography: (theme: (arg0: string) => any) => ({
         DEFAULT: {
           css: {
             color: theme('colors.gray.700'),
