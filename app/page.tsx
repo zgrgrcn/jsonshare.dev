@@ -57,7 +57,7 @@ export default function Home() {
 
     return (
         <div>
-            <div style={{height: '95vh'}} className="grid grid-cols-2 gap-4">
+            <div style={{height: '85vh'}} className="grid grid-cols-2 gap-4">
                 <div className="jsoneditor" ref={containerRef1}/>
                 <div className="jsoneditor" ref={containerRef2}/>
             </div>

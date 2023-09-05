@@ -50,7 +50,7 @@ const SaveButton: React.FC<SaveButtonProps> = ({ jsonData }) => {
                 borderRadius: '4px',
                 cursor: loading ? 'not-allowed' : 'pointer',
                 marginTop: '10px',
-                marginLeft: '10px',
+                marginRight: '10px', // Change marginLeft to marginRight
             }}
             onClick={handleSaveClick}
             disabled={loading}
