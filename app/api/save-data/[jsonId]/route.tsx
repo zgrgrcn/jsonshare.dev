@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { findDocument, isValidId, updateDocument } from "@/app/utils/dbConnect";
 
-export async function GET(req: Request, context: { params: { jsonId: string } }) {
-    const jsonId = context.params.jsonId;
+export async function GET(req: Request, context: { params: Promise<{ jsonId: string }> }) {
+    const { jsonId } = await context.params;
     if (!isValidId(jsonId)) {
         return NextResponse.json({ error: 'JSON not found' }, { status: 404 });
     }
@@ -19,8 +19,8 @@ export async function GET(req: Request, context: { params: { jsonId: string } })
     }
 }
 
-export async function PATCH(req: Request, context: { params: { jsonId: string } }) {
-    const jsonId = context.params.jsonId;
+export async function PATCH(req: Request, context: { params: Promise<{ jsonId: string }> }) {
+    const { jsonId } = await context.params;
     if (!isValidId(jsonId)) {
         return NextResponse.json({ error: 'JSON not found' }, { status: 404 });
     }

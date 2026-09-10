@@ -2,13 +2,14 @@
 'use client'
 import UpdateButton from "@/app/components/UpdateButton";
 import CopyLink from "@/app/components/CopyLink";
-import { useState, useRef, useEffect } from "react";
+import { use, useState, useRef, useEffect } from "react";
 import 'jsoneditor/dist/jsoneditor.css';
 
 type Status = 'loading' | 'ready' | 'notfound' | 'error';
 
-export default function Page({ params }: { params: { slug: string } }) {
-  const jsonId = params.slug?.[0] ?? '';
+export default function Page({ params }: { params: Promise<{ slug?: string[] }> }) {
+  const { slug } = use(params);
+  const jsonId = slug?.[0] ?? '';
   const [newJson, setNewJson] = useState<any>({});
   const [status, setStatus] = useState<Status>('loading');
   const [parseError, setParseError] = useState<string | null>(null);
@@ -58,30 +59,45 @@ export default function Page({ params }: { params: { slug: string } }) {
     if (status !== 'ready') return;
 
     let disposed = false;
+
     // @ts-ignore
     import("jsoneditor").then((JSONEditor) => {
+      // Efekt temizlendiyse ya da kapsayicilar DOM'dan ciktiysa hic dokunma:
+      // jsoneditor kurulurken kapsayicinin genisligini olcuyor, null olursa patliyor.
       if (disposed) return;
-      if (!editor1.current && containerRef1.current) {
-        editor1.current = new JSONEditor.default(containerRef1.current, {
-          mode: 'code',
-          onChangeText: onChangeText,
-        });
-        editor1.current.set(loaded.current);
+      const c1 = containerRef1.current;
+      const c2 = containerRef2.current;
+      if (!c1 || !c2 || !c1.isConnected || !c2.isConnected) return;
+
+      try {
+        if (!editor1.current) {
+          editor1.current = new JSONEditor.default(c1, {
+            mode: 'code',
+            onChangeText: onChangeText,
+          });
+          editor1.current.set(loaded.current);
+        }
+        if (!editor2.current) {
+          editor2.current = new JSONEditor.default(c2, { mode: 'view' });
+          editor2.current.set(loaded.current);
+        }
+      } catch (error) {
+        console.error('jsoneditor init failed', error);
       }
-      if (!editor2.current && containerRef2.current) {
-        editor2.current = new JSONEditor.default(containerRef2.current, {
-          mode: 'view',
-        });
-        editor2.current.set(loaded.current);
-      }
+    }).catch((error) => {
+      console.error('jsoneditor import failed', error);
     });
 
     return () => {
       disposed = true;
-      editor1.current?.destroy();
-      editor2.current?.destroy();
-      editor1.current = null;
-      editor2.current = null;
+      for (const ref of [editor1, editor2]) {
+        try {
+          ref.current?.destroy();
+        } catch {
+          // Kapsayici React tarafindan zaten kaldirilmis olabilir.
+        }
+        ref.current = null;
+      }
     };
   }, [status]);
 
@@ -91,7 +107,11 @@ export default function Page({ params }: { params: { slug: string } }) {
       const parsed = JSON.parse(jsonString);
       setParseError(null);
       setNewJson(parsed);
-      editor2.current?.update(parsed);
+      try {
+        editor2.current?.update(parsed);
+      } catch {
+        // onizleme editoru kapatilmis olabilir
+      }
     } catch (error) {
       setParseError(error instanceof Error ? error.message : 'Invalid JSON');
     }
