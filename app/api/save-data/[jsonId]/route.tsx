@@ -1,31 +1,45 @@
 import { NextResponse } from 'next/server';
-import connectToDatabase from "@/app/utils/dbConnect";
-import { ObjectId } from 'mongodb';
+import { findDocument, isValidId, updateDocument } from "@/app/utils/dbConnect";
 
 export async function GET(req: Request, context: { params: { jsonId: string } }) {
     const jsonId = context.params.jsonId;
-
-    const collection = await connectToDatabase();
-    if (!collection) {
-        return NextResponse.json({ error: 'Error connecting to database' });
+    if (!isValidId(jsonId)) {
+        return NextResponse.json({ error: 'JSON not found' }, { status: 404 });
     }
 
-    const myJson = await collection.findOne({ _id: new ObjectId(jsonId) });
-    if (!myJson) {
-        return NextResponse.json({ error: 'JSON not found' });
+    try {
+        const body = await findDocument(jsonId);
+        if (!body) {
+            return NextResponse.json({ error: 'JSON not found' }, { status: 404 });
+        }
+        return NextResponse.json({ success: true, jsonId, jsonData: body.jsonData });
+    } catch (error) {
+        console.error('save-data GET failed', error);
+        return NextResponse.json({ error: 'An error occurred' }, { status: 500 });
     }
-    return NextResponse.json({ success: true, jsonId, jsonData: myJson.body.jsonData });
 }
 
 export async function PATCH(req: Request, context: { params: { jsonId: string } }) {
     const jsonId = context.params.jsonId;
-
-    const collection = await connectToDatabase();
-    if (!collection) {
-        return NextResponse.json({ error: 'Error connecting to database' });
+    if (!isValidId(jsonId)) {
+        return NextResponse.json({ error: 'JSON not found' }, { status: 404 });
     }
 
-    const body = await req.json();
-    await collection.updateOne({ _id: new ObjectId(jsonId) }, { $set: { body } });
-    return NextResponse.json({ success: true, jsonId, jsonData: req.body });
+    let body: any;
+    try {
+        body = await req.json();
+    } catch {
+        return NextResponse.json({ error: 'No JSON data received' }, { status: 400 });
+    }
+
+    try {
+        const updated = await updateDocument(jsonId, body);
+        if (!updated) {
+            return NextResponse.json({ error: 'JSON not found' }, { status: 404 });
+        }
+        return NextResponse.json({ success: true, jsonId, jsonData: body.jsonData });
+    } catch (error) {
+        console.error('save-data PATCH failed', error);
+        return NextResponse.json({ error: 'An error occurred' }, { status: 500 });
+    }
 }

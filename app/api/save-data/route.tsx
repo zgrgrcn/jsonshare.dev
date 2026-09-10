@@ -1,24 +1,23 @@
 import { NextResponse } from 'next/server';
-import connectToDatabase from "@/app/utils/dbConnect";
+import { insertDocument } from "@/app/utils/dbConnect";
 
 export async function POST(req: Request) {
-    const body = await req.json();
-    if (!body) {
-        return NextResponse.json({ error: 'No JSON data received' });
-    }
+    let body: any;
     try {
-        const collection = await connectToDatabase();
-        if (!collection) {
-            return NextResponse.json({ error: 'Error connecting to database' });
-        }
+        body = await req.json();
+    } catch {
+        return NextResponse.json({ error: 'No JSON data received' }, { status: 400 });
+    }
+    if (!body) {
+        return NextResponse.json({ error: 'No JSON data received' }, { status: 400 });
+    }
 
-        body.version=1;
-        const response = await collection.insertOne({body});
-        const _id = response.insertedId;
-
+    try {
+        body.version = 1;
+        const _id = await insertDocument(body);
         return NextResponse.json({ _id, ...body });
     } catch (error) {
-        console.error('An error occurred:', error);
-        return NextResponse.json({ error: 'An error occurred' });
+        console.error('save-data POST failed', error);
+        return NextResponse.json({ error: 'An error occurred' }, { status: 500 });
     }
 }
