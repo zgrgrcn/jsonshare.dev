@@ -1,76 +1,146 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 'use client'
 import UpdateButton from "@/app/components/UpdateButton";
+import CopyLink from "@/app/components/CopyLink";
 import { useState, useRef, useEffect } from "react";
 import 'jsoneditor/dist/jsoneditor.css';
 
-export default function Page({ params }: { params: { slug: string } }) {
-  const [newJson, setNewJson] = useState<any>({});
+type Status = 'loading' | 'ready' | 'notfound' | 'error';
 
-  const containerRef1 = useRef(null), containerRef2 = useRef(null);
-  let jsonEditor1: any = null, jsonEditor2: any = null;
+export default function Page({ params }: { params: { slug: string } }) {
+  const jsonId = params.slug?.[0] ?? '';
+  const [newJson, setNewJson] = useState<any>({});
+  const [status, setStatus] = useState<Status>('loading');
+  const [parseError, setParseError] = useState<string | null>(null);
+  const [shareUrl, setShareUrl] = useState('');
+
+  const containerRef1 = useRef<HTMLDivElement | null>(null);
+  const containerRef2 = useRef<HTMLDivElement | null>(null);
+  // Editor ornekleri ref'te tutuluyor: yerel degiskenler her render'da sifirlaniyordu.
+  const editor1 = useRef<any>(null);
+  const editor2 = useRef<any>(null);
+  const loaded = useRef<any>(null);
 
   useEffect(() => {
-    fetch(`/api/save-data/${params.slug[0]}`, {
-      method: 'GET',
-    }).then((response) => {
-      if (response.ok) {
-        response.json().then((responseBody) => {
-          setNewJson(responseBody.jsonData)
-          initJsonEditor(responseBody.jsonData);
-        });
-      } else {
-        console.error('response', response)
-        console.error('Failed to get data from the database');
-      }
-    }).catch((error) => {
-      console.error('An error occurred:', error);
-    });
+    setShareUrl(window.location.href);
   }, []);
 
-  const onChangeText = (jsonString: string) => {
-    const newJson = JSON.parse(jsonString);
-    setNewJson(newJson);
-    if (jsonEditor2) jsonEditor2.update(newJson);
-  };
+  useEffect(() => {
+    if (!jsonId) {
+      setStatus('notfound');
+      return;
+    }
 
-  return (
-    <div>
-      <div style={{ height: '95vh' }} className="grid grid-cols-2 gap-4">
-        <div className="jsoneditor" ref={containerRef1} />
-        <div className="jsoneditor" ref={containerRef2} />
-      </div>
+    fetch(`/api/save-data/${jsonId}`, { method: 'GET' })
+      .then((response) => {
+        if (response.status === 404) {
+          setStatus('notfound');
+          return;
+        }
+        if (!response.ok) {
+          setStatus('error');
+          return;
+        }
+        return response.json().then((responseBody) => {
+          loaded.current = responseBody.jsonData;
+          setNewJson(responseBody.jsonData);
+          setStatus('ready');
+        });
+      })
+      .catch((error) => {
+        console.error('An error occurred:', error);
+        setStatus('error');
+      });
+  }, []);
 
-      <UpdateButton jsonData={{...newJson, id: params.slug[0]}} />
-    </div>
-  );
+  // Editorler ancak kapsayicilar DOM'a girdikten sonra kurulabilir.
+  useEffect(() => {
+    if (status !== 'ready') return;
 
-  function initJsonEditor(newJson: any) {
+    let disposed = false;
     // @ts-ignore
     import("jsoneditor").then((JSONEditor) => {
-      if (!jsonEditor1) {
-        jsonEditor1 = new JSONEditor.default(containerRef1.current, {
-          // modes: ['text', 'view', 'code'],
+      if (disposed) return;
+      if (!editor1.current && containerRef1.current) {
+        editor1.current = new JSONEditor.default(containerRef1.current, {
           mode: 'code',
           onChangeText: onChangeText,
         });
-        jsonEditor1.set(newJson);
+        editor1.current.set(loaded.current);
       }
-      if (!jsonEditor2) {
-        jsonEditor2 = new JSONEditor.default(containerRef2.current, {
-          // modes: ['text', 'view'],
+      if (!editor2.current && containerRef2.current) {
+        editor2.current = new JSONEditor.default(containerRef2.current, {
           mode: 'view',
         });
-        jsonEditor2.set(newJson);
+        editor2.current.set(loaded.current);
       }
-
-      return () => {
-        if (jsonEditor1) {
-          jsonEditor1.destroy();
-        }
-        if (jsonEditor2) {
-          jsonEditor2.destroy();
-        }
-      };
     });
+
+    return () => {
+      disposed = true;
+      editor1.current?.destroy();
+      editor2.current?.destroy();
+      editor1.current = null;
+      editor2.current = null;
+    };
+  }, [status]);
+
+  const onChangeText = (jsonString: string) => {
+    // Gecersiz JSON yazarken istisna firlatip onizlemeyi dondurmemesi icin yakaliyoruz.
+    try {
+      const parsed = JSON.parse(jsonString);
+      setParseError(null);
+      setNewJson(parsed);
+      editor2.current?.update(parsed);
+    } catch (error) {
+      setParseError(error instanceof Error ? error.message : 'Invalid JSON');
+    }
+  };
+
+  if (status === 'loading') {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <p className="text-gray-500 dark:text-gray-400">Loading…</p>
+      </div>
+    );
   }
+
+  if (status === 'notfound' || status === 'error') {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
+        <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+          {status === 'notfound' ? 'This JSON was not found' : 'Something went wrong'}
+        </h1>
+        <p className="text-gray-500 dark:text-gray-400">
+          {status === 'notfound'
+            ? 'The link may be wrong, or the document was removed.'
+            : 'Please try again in a moment.'}
+        </p>
+        <a href="/" className="rounded bg-primary-600 px-5 py-2 font-medium text-white hover:bg-primary-700">
+          Create a new one
+        </a>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-full flex-col">
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 py-3 md:grid-cols-2">
+        <div className="jsoneditor h-full min-h-0" ref={containerRef1} />
+        <div className="jsoneditor h-full min-h-0" ref={containerRef2} />
+      </div>
+
+      <div className="sticky bottom-0 z-30 shrink-0 border-t border-gray-200 bg-white/90 py-3 backdrop-blur dark:border-gray-700 dark:bg-dark/90">
+        {parseError && (
+          <p className="mb-2 truncate text-sm text-amber-600 dark:text-amber-400" title={parseError}>
+            Invalid JSON — preview paused. {parseError}
+          </p>
+        )}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          {shareUrl && <CopyLink url={shareUrl} />}
+          <UpdateButton id={jsonId} jsonData={newJson} disabled={!!parseError} />
+        </div>
+      </div>
+    </div>
+  );
 }

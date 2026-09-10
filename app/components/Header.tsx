@@ -6,7 +6,7 @@ import NextLink from 'next/link'
 export function Header() {
   return (
     <header className="supports-backdrop-blur:bg-white/95 sticky top-0 z-40 overflow-x-hidden bg-white/75 py-3 backdrop-blur dark:bg-dark/75">
-      <div className="mx-auto flex max-w-3xl items-center justify-between px-3 xl:max-w-5xl xl:px-0">
+      <div className="mx-auto flex w-[95vw] items-center justify-between px-3 lg:w-[75vw] lg:px-0">
         <div>
           <NextLink href="/" aria-label="jsonshare.dev">
               <span className="text-gray-900 dark:text-gray-100">JSON</span>

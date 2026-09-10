@@ -14,6 +14,7 @@ export default function Home() {
         'string': 'Hello World',
         'color': '#82b92c'
     });
+    const [parseError, setParseError] = useState<string | null>(null);
 
     const containerRef1 = useRef(null), containerRef2 = useRef(null);
     let jsonEditor1: any = null, jsonEditor2: any = null;
@@ -21,7 +22,7 @@ export default function Home() {
     useEffect(() => {
         // @ts-ignore
         import("jsoneditor").then((JSONEditor) => {
-            
+
             if (!jsonEditor1) {
                 jsonEditor1 = new JSONEditor.default(containerRef1.current, {
                     // modes: ['text', 'view', 'code'],
@@ -48,21 +49,34 @@ export default function Home() {
             };
         });
     }, []);
-    
+
     const onChangeText = (jsonString: string) => {
-        const newJson = JSON.parse(jsonString);
-        setJson(newJson);
-        if (jsonEditor2) jsonEditor2.update(newJson);
+        // Gecersiz JSON yazarken istisna firlatip onizlemeyi dondurmemesi icin yakaliyoruz.
+        try {
+            const newJson = JSON.parse(jsonString);
+            setParseError(null);
+            setJson(newJson);
+            if (jsonEditor2) jsonEditor2.update(newJson);
+        } catch (error) {
+            setParseError(error instanceof Error ? error.message : 'Invalid JSON');
+        }
     };
 
     return (
-        <div>
-            <div style={{height: '85vh'}} className="grid grid-cols-2 gap-4">
-                <div className="jsoneditor" ref={containerRef1}/>
-                <div className="jsoneditor" ref={containerRef2}/>
+        <div className="flex h-full flex-col">
+            <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 py-3 md:grid-cols-2">
+                <div className="jsoneditor h-full min-h-0" ref={containerRef1}/>
+                <div className="jsoneditor h-full min-h-0" ref={containerRef2}/>
             </div>
-            
-            <SaveButton jsonData={json} />
+
+            <div className="sticky bottom-0 z-30 shrink-0 border-t border-gray-200 bg-white/90 py-3 backdrop-blur dark:border-gray-700 dark:bg-dark/90">
+                {parseError && (
+                    <p className="mb-2 truncate text-sm text-amber-600 dark:text-amber-400" title={parseError}>
+                        Invalid JSON — preview paused. {parseError}
+                    </p>
+                )}
+                <SaveButton jsonData={json} disabled={!!parseError} />
+            </div>
         </div>
     );
 }

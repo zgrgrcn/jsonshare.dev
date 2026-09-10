@@ -16,9 +16,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body className={inter.className}>
         <Header />
-        <div className="mx-auto max-w-3xl px-3 sm:px-6 xl:max-w-5xl xl:px-0">
-          <div className="flex flex-col justify-between">
-            <main style={{ minHeight: `calc(100vh - 69px)` }}>
+        <div className="mx-auto w-[95vw] px-3 lg:w-[75vw] lg:px-0">
+          <div className="flex flex-col">
+            <main style={{ height: `calc(100vh - 69px)` }}>
               <Providers>
                 {children}
               </Providers>
