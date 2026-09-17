@@ -1,0 +1,21 @@
+# Allow all search engines and AI web crawlers
+User-agent: *
+Allow: /
+Allow: /compare
+Allow: /llms.txt
+Disallow: /api/
+
+# AI Crawlers explicitly welcomed
+User-agent: GPTBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+Sitemap: https://jsonshare.dev/sitemap.xml
